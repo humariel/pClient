@@ -103,7 +103,7 @@ class SearchTree:
                 self.solution_cost = node.cum_cost
                 return self.get_path(node), self.solution_size, self.solution_cost
             lnewnodes = []
-            for a in self.problem.domain.actions():
+            for a in self.problem.domain.actions(node.state):
                 newstate = self.problem.domain.result(node.state, a)
                 lnewnodes += [SearchNode(a,
                                         newstate,

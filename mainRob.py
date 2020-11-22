@@ -26,14 +26,14 @@ def getReversePath(actions):
     return reverse
 
 class MyRob(CRobLinkAngs):
-    def __init__(self, rob_name, rob_id, angles, host):
+    def __init__(self, rob_name, rob_id, angles, host, start, target):
         CRobLinkAngs.__init__(self, rob_name, rob_id, angles, host)
         self.first = True
         # robot representation
-        self.x = 3
-        self.y = 7
-        self.targetX = 25
-        self.targetY = 7
+        self.x = start[0]
+        self.y = start[1]
+        self.targetX = target[0]
+        self.targetY = target[1]
         self.ang = 0
         self.outL = 0
         self.outR = 0
@@ -105,7 +105,7 @@ class MyRob(CRobLinkAngs):
         # TODO move this to init
         if self.first:
             #search path
-            d = RMI()
+            d = RMI(self.labMap)
             p = SearchProblem(d, [self.x, self.y], [self.targetX, self.targetY])
             t = SearchTree(p)
             path, _, _ = t.search() 
@@ -223,14 +223,14 @@ class Map():
                for c in range(len(line)):
                    if (c+1) % 3 == 0:
                        if line[c] == '|':
-                           self.labMap[row][(c+1)/3*2-1]='|'
+                           self.labMap[row][(c+1)//3*2-1]='|'
                        else:
                            None
            else:  # this line defines horizontal lines
                for c in range(len(line)):
                    if c % 3 == 0:
                        if line[c] == '-':
-                           self.labMap[row][c/3*2]='-'
+                           self.labMap[row][c//3*2]='-'
                        else:
                            None
                
@@ -241,6 +241,8 @@ rob_name = "pClient1"
 host = "localhost"
 pos = 1
 mapc = None
+start = [3.0,7.0]
+target = [25.0,7.0]
 
 for i in range(1, len(sys.argv),2):
     if (sys.argv[i] == "--host" or sys.argv[i] == "-h") and i != len(sys.argv) - 1:
@@ -251,12 +253,16 @@ for i in range(1, len(sys.argv),2):
         rob_name = sys.argv[i + 1]
     elif (sys.argv[i] == "--map" or sys.argv[i] == "-m") and i != len(sys.argv) - 1:
         mapc = Map(sys.argv[i + 1])
+    elif (sys.argv[i] == "--start" or sys.argv[i] == "-s") and i != len(sys.argv) - 1:
+        start = [float(f) for f in sys.argv[i+1].split(',')]
+    elif (sys.argv[i] == "--target" or sys.argv[i] == "-t") and i != len(sys.argv) - 1:
+        target = [float(f) for f in sys.argv[i+1].split(',')]
     else:
         print("Unkown argument", sys.argv[i])
         quit()
 
 if __name__ == '__main__':
-    rob=MyRob(rob_name,pos,[0.0,60.0,-60.0,180.0],host)
+    rob=MyRob(rob_name,pos,[0.0,60.0,-60.0,180.0],host, start, target)
     if mapc != None:
         rob.setMap(mapc.labMap)
         rob.printMap()
