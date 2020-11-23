@@ -1,6 +1,6 @@
 from enum import Enum
 
-class Cards(Enum):
+class Dirs(Enum):
     EAST = 0
     SOUTH = 1
     WEST = 2

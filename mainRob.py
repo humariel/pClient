@@ -5,7 +5,7 @@ from math import *
 import xml.etree.ElementTree as ET
 from tree_search import *
 from RMI import *
-from Cards import *
+from Dirs import *
 import math
 
 CELLROWS=7
@@ -14,14 +14,14 @@ CELLCOLS=14
 def getReversePath(actions):
     reverse = []
     for a in reversed(actions):
-        if a == Cards.NORTH:
-            reverse.append(Cards.SOUTH)
-        elif a == Cards.EAST:
-            reverse.append(Cards.WEST)
-        elif a == Cards.SOUTH:
-            reverse.append(Cards.NORTH)
+        if a == Dirs.NORTH:
+            reverse.append(Dirs.SOUTH)
+        elif a == Dirs.EAST:
+            reverse.append(Dirs.WEST)
+        elif a == Dirs.SOUTH:
+            reverse.append(Dirs.NORTH)
         else:   
-            reverse.append(Cards.EAST)
+            reverse.append(Dirs.EAST)
 
     return reverse
 
@@ -37,6 +37,7 @@ class MyRob(CRobLinkAngs):
         self.ang = 0
         self.outL = 0
         self.outR = 0
+        self.state = "explore"
         # movement
         self.result = [self.x,self.y]
         self.actions = []
@@ -60,6 +61,8 @@ class MyRob(CRobLinkAngs):
 
         while True:
             self.readSensors()
+            self.ang = self.measures.compass
+            self.fixPosition()
 
             if self.measures.endLed:
                 print(self.rob_name + " exiting")
@@ -99,7 +102,6 @@ class MyRob(CRobLinkAngs):
         right = self.measures.irSensor[2]
         back = self.measures.irSensor[3]
         collision = self.measures.collision
-        self.ang = self.measures.compass
 
         lPow, rPow = 0.0 , 0.0
         # TODO move this to init
@@ -109,92 +111,125 @@ class MyRob(CRobLinkAngs):
             p = SearchProblem(d, [self.x, self.y], [self.targetX, self.targetY])
             t = SearchTree(p)
             path, _, _ = t.search() 
-            self.actions = path[2:] #ignore first action which is none, ignore second cause ???
+            self.actions = path[1:] #ignore first action which is none
             #add reverse path to go back
             self.actions += getReversePath(self.actions)
-            self.actions.append(Cards.STOP)
-            print(self.actions)
+            self.actions.append(Dirs.STOP)
             self.updateResult()
             self.first = False
         
         self.setNextAction()
-        print(self.actions)
-        targetRotation = self.updateTargetRotation()
+        #print(self.actions)
+        print("---------------------------------------")
+        print("Action-> {}".format(self.actions[0]))
+        print("Rotating -> {} {}".format(self.state == "rotate", self.angVariance(self.targetRotation())))
+        print("Think -> {},{}".format(self.x, self.y))
+        print("Going -> {},{}".format(self.result[0], self.result[1]))
+        print("---------------------------------------")
+        targetRotation = self.targetRotation()
 
-        if not collision:
-            adjust = self.rotationAdjustment(targetRotation)
-            adjust = self.translationAdjustment(left, right, adjust)
-            if center > 5 :
-                lPow = -0.1 + adjust
-                rPow = -0.1 - adjust
-            else :
-                lPow = 0.1 + adjust
-                rPow = 0.1 - adjust
-            
-            if self.actions[0] == Cards.STOP :
-                lPow = 0.0
-                rPow = 0.0
+        if self.state == "rotate":
+            dir_ = self.angVariance(self.targetRotation())
+            if abs(dir_)<=5:
+                
+                self.state = 'explore'
+                if self.measures.ground==0:
+                    lPow = -self.outL
+                    rPow = -self.outR
+                else:        
+                    lPow = min(0.15, 0.14-self.outL) #stop robot giving it the oposite direction
+                    rPow = min(0.15, 0.14-self.outR) #stop robot giving it the oposite direction
+
+            else:
+                power = min(0.15, abs(dir_)/275) #rotate faster the higher the angle 
+
+                lPow = -power * [-1,1][dir_<0] 
+                rPow = power * [-1,1][dir_<0]
         else:
-            lPow = -0.1
-            rPow = -0.1
+            if not collision:
+                adjust = self.rotationAdjustment(targetRotation)
+                adjust = self.translationAdjustment(left, right, adjust)
+                if center > 5 :
+                    lPow = -0.1 + adjust
+                    rPow = -0.1 - adjust
+                else :
+                    lPow = 0.1 + adjust
+                    rPow = 0.1 - adjust
+                
+                if self.actions[0] == Dirs.STOP :
+                    lPow = 0.0
+                    rPow = 0.0
+            else:
+                lPow = -0.1
+                rPow = -0.1
 
         self.updatePosition(lPow, rPow)
         self.driveMotors(lPow, rPow)
-
     def updateResult(self):
-        if self.actions[0] == Cards.NORTH:
+        if self.actions[0] == Dirs.NORTH:
             self.result[1] += 2
-        elif self.actions[0] == Cards.EAST :
+        elif self.actions[0] == Dirs.EAST :
             self.result[0] += 2
-        elif self.actions[0] == Cards.SOUTH :
+        elif self.actions[0] == Dirs.SOUTH :
             self.result[1] -= 2
-        elif self.actions[0] == Cards.WEST :
+        elif self.actions[0] == Dirs.WEST :
             self.result[0] -= 2
 
     def setNextAction(self):
-        if self.actions[0] == Cards.NORTH:
+        action = self.actions[0]
+        if action == Dirs.NORTH:
             if self.y >= self.result[1] :
                 self.actions.pop(0)
+                if action != self.actions[0]:
+                    self.state = "rotate"
                 self.updateResult()
-        elif self.actions[0] == Cards.EAST :
+        elif action == Dirs.EAST :
             if self.x >= self.result[0] :
                 self.actions.pop(0)
+                if action != self.actions[0]:
+                    self.state = "rotate"
                 self.updateResult()
-        elif self.actions[0] == Cards.SOUTH :
+        elif action == Dirs.SOUTH :
             if self.y <= self.result[1] :
                 self.actions.pop(0)
+                if action != self.actions[0]:
+                    self.state = "rotate"
                 self.updateResult()
-        elif self.actions[0] == Cards.WEST:
+        elif action == Dirs.WEST:
             if self.x <= self.result[0] :
                 self.actions.pop(0)
+                if action != self.actions[0]:
+                    self.state = "rotate"
                 self.updateResult()
             
-    def updateTargetRotation(self):
-        if self.actions[0] == Cards.NORTH:
+    def targetRotation(self):
+        if self.actions[0] == Dirs.NORTH:
             return 90.0
-        elif self.actions[0] == Cards.EAST :
+        elif self.actions[0] == Dirs.EAST :
             return 0.0
-        elif self.actions[0] == Cards.SOUTH :
+        elif self.actions[0] == Dirs.SOUTH :
             return -90.0
-        elif self.actions[0] == Cards.WEST :
+        elif self.actions[0] == Dirs.WEST :
             return 180.0
         else:
             return self.ang
-
     
     # The WEST angle is special since the angles are measured in [-180, 180]
     # so we need to make sure that we dont get huge variances when doing for example:
     #        : -178 - 180;
     # The simple solution is to compare to 180 when the measured angle is positive,
     # and to -180 when the measured angle is negative.
-    def rotationAdjustment(self, targetRotation):
+    def angVariance(self, targetRotation):
         angVariance = 0.0
-        if self.actions[0] == Cards.WEST:
+        if self.actions[0] == Dirs.WEST:
             if self.ang > 0 : angVariance = self.ang - targetRotation
             else : angVariance = self.ang + targetRotation
         else :
             angVariance = self.ang - targetRotation
-        return angVariance * 0.005
+        return angVariance
+
+    def rotationAdjustment(self, targetRotation):
+        return self.angVariance(targetRotation) * 0.005
 
     def translationAdjustment(self, left, right, adjust):
         if(math.fabs(left+right) < 4):
@@ -208,6 +243,39 @@ class MyRob(CRobLinkAngs):
         lin = (self.outL + self.outR) / 2
         self.x = self.x + lin*math.cos(self.ang*math.pi/180)
         self.y = self.y + lin*math.sin(self.ang*math.pi/180)
+
+    def fixPosition(self):
+        measures = self.measures
+        sensors = measures.irSensor
+        compass = measures.compass
+        try:
+            distLeft = (1/sensors[LEFT])+0.5
+            distRight = (1/sensors[RIGHT])+0.5
+            distFront = (1/sensors[FRONT])+0.5
+        except:
+            return
+        
+        
+        roundX = int(round(self.x))
+        roundY = int(round(self.y))
+        validCell = abs(roundX - self.x)<=0.5 and abs(roundY - self.y)<=0.5
+        dir_ = selg.angVariance(self.targetRotation())
+        validAngle = abs(dir_) <= 10
+        if (distRight<=1.0 or distLeft<=1.0) and validCell and validAngle:
+            m,M = min(distRight,distLeft), max(distRight,distLeft)
+            
+            if m<0.7:
+
+                fixY = self.direction & 1
+                fixX = 1 - fixY
+                robotVarX = self.x - roundX
+                robotVarY = self.y - roundY
+
+                sensorVarX = (0.9-m)*[-1,1][(distRight > distLeft) == (self.direction==EAST)]
+                sensorVarY = (0.9-m)*[-1,1][(distRight > distLeft) == (self.direction==SOUTH)]
+                
+                self.x += fixX*(sensorVarX - robotVarX)/2
+                self.y += fixY*(sensorVarY - robotVarY)/2
 
 class Map():
     def __init__(self, filename):
