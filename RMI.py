@@ -18,7 +18,7 @@ class RMI(SearchDomain):
             for a in actions:
                 newPos = self.result(state, a)
                 newPos = [int(x) for x in newPos]
-                if newPos[0] < 0 or newPos[0] >= (CELLCOLS*2-1) or newPos[1] < 0 or newPos[1] >= CELLROWS*2-1:
+                if newPos[0] < 0 or newPos[0] > (CELLCOLS*2-1) or newPos[1] < 0 or newPos[1] > CELLROWS*2-1:
                     toRemove.append(a)
                 else:
                     cell = [0, 0]

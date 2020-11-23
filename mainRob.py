@@ -119,13 +119,12 @@ class MyRob(CRobLinkAngs):
             self.first = False
         
         self.setNextAction()
-        #print(self.actions)
-        print("---------------------------------------")
-        print("Action-> {}".format(self.actions[0]))
-        print("Rotating -> {} {}".format(self.state == "rotate", self.angVariance(self.targetRotation())))
-        print("Think -> {},{}".format(self.x, self.y))
-        print("Going -> {},{}".format(self.result[0], self.result[1]))
-        print("---------------------------------------")
+        # print("---------------------------------------")
+        # print("Action-> {}".format(self.actions[0]))
+        # print("Rotating -> {} {}".format(self.state == "rotate", self.angVariance(self.targetRotation())))
+        # print("Think -> {},{}".format(self.x, self.y))
+        # print("Going -> {},{}".format(self.result[0], self.result[1]))
+        # print("---------------------------------------")
         targetRotation = self.targetRotation()
 
         if self.state == "rotate":
@@ -146,22 +145,19 @@ class MyRob(CRobLinkAngs):
                 lPow = -power * [-1,1][dir_<0] 
                 rPow = power * [-1,1][dir_<0]
         else:
-            if not collision:
-                adjust = self.rotationAdjustment(targetRotation)
-                adjust = self.translationAdjustment(left, right, adjust)
-                if center > 5 :
-                    lPow = -0.1 + adjust
-                    rPow = -0.1 - adjust
-                else :
-                    lPow = 0.1 + adjust
-                    rPow = 0.1 - adjust
-                
-                if self.actions[0] == Dirs.STOP :
-                    lPow = 0.0
-                    rPow = 0.0
-            else:
-                lPow = -0.1
-                rPow = -0.1
+            adjust = self.rotationAdjustment(targetRotation)
+            adjust = self.translationAdjustment(left, right, adjust)
+            if center > 5 :
+                lPow = -0.1 + adjust
+                rPow = -0.1 - adjust
+            else :
+                lPow = 0.1 + adjust
+                rPow = 0.1 - adjust
+            
+            if self.actions[0] == Dirs.STOP :
+                lPow = 0.0
+                rPow = 0.0
+
 
         self.updatePosition(lPow, rPow)
         self.driveMotors(lPow, rPow)
