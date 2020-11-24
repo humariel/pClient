@@ -4,7 +4,7 @@ from croblink import *
 from math import *
 import xml.etree.ElementTree as ET
 from tree_search import *
-from RMI import *
+from Challenge1 import *
 from Dirs import *
 import math
 
@@ -14,16 +14,19 @@ CELLCOLS=14
 def getReversePath(actions):
     reverse = []
     for a in reversed(actions):
-        if a == Dirs.NORTH:
-            reverse.append(Dirs.SOUTH)
-        elif a == Dirs.EAST:
-            reverse.append(Dirs.WEST)
-        elif a == Dirs.SOUTH:
-            reverse.append(Dirs.NORTH)
-        else:   
-            reverse.append(Dirs.EAST)
+        reverse.append(opposite(a))
 
     return reverse
+
+def opposite(action):
+    if action == Dirs.NORTH:
+        return Dirs.SOUTH
+    elif action == Dirs.EAST:
+        return Dirs.WEST
+    elif action == Dirs.SOUTH:
+        return Dirs.NORTH
+    else:   
+        return Dirs.EAST
 
 class MyRob(CRobLinkAngs):
     def __init__(self, rob_name, rob_id, angles, host, start, target):
@@ -107,7 +110,7 @@ class MyRob(CRobLinkAngs):
         # TODO move this to init
         if self.first:
             #search path
-            d = RMI(self.labMap)
+            d = Challenge1(self.labMap)
             p = SearchProblem(d, [self.x, self.y], [self.targetX, self.targetY])
             t = SearchTree(p)
             path, _, _ = t.search() 
@@ -117,14 +120,15 @@ class MyRob(CRobLinkAngs):
             self.actions.append(Dirs.STOP)
             self.updateResult()
             self.first = False
+            if self.actions[0] != Dirs.EAST: self.state = "rotate"   # robot starts oriented towards east so rotate if first actions is not east
         
         self.setNextAction()
-        # print("---------------------------------------")
-        # print("Action-> {}".format(self.actions[0]))
-        # print("Rotating -> {} {}".format(self.state == "rotate", self.angVariance(self.targetRotation())))
-        # print("Think -> {},{}".format(self.x, self.y))
-        # print("Going -> {},{}".format(self.result[0], self.result[1]))
-        # print("---------------------------------------")
+        print("---------------------------------------")
+        print("Action-> {}".format(self.actions[0]))
+        print("Rotating -> {} {}".format(self.state == "rotate", self.angVariance(self.targetRotation())))
+        print("Think -> {},{}".format(self.x, self.y))
+        print("Going -> {},{}".format(self.result[0], self.result[1]))
+        print("---------------------------------------")
         targetRotation = self.targetRotation()
 
         if self.state == "rotate":
@@ -132,12 +136,12 @@ class MyRob(CRobLinkAngs):
             if abs(dir_)<=5:
                 
                 self.state = 'explore'
-                if self.measures.ground==0:
-                    lPow = -self.outL
-                    rPow = -self.outR
-                else:        
-                    lPow = min(0.15, 0.14-self.outL) #stop robot giving it the oposite direction
-                    rPow = min(0.15, 0.14-self.outR) #stop robot giving it the oposite direction
+                # if self.measures.ground==0:
+                #     lPow = -self.outL
+                #     rPow = -self.outR
+                # else:        
+                lPow = min(0.15, 0.14-self.outL) #stop robot giving it the oposite direction
+                rPow = min(0.15, 0.14-self.outR) #stop robot giving it the oposite direction
 
             else:
                 power = min(0.15, abs(dir_)/275) #rotate faster the higher the angle 
@@ -161,6 +165,7 @@ class MyRob(CRobLinkAngs):
 
         self.updatePosition(lPow, rPow)
         self.driveMotors(lPow, rPow)
+        
     def updateResult(self):
         if self.actions[0] == Dirs.NORTH:
             self.result[1] += 2
@@ -267,8 +272,8 @@ class MyRob(CRobLinkAngs):
                 robotVarX = self.x - roundX
                 robotVarY = self.y - roundY
 
-                sensorVarX = (0.9-m)*[-1,1][(distRight > distLeft) == (self.direction==EAST)]
-                sensorVarY = (0.9-m)*[-1,1][(distRight > distLeft) == (self.direction==SOUTH)]
+                sensorVarX = (0.9-m)*[-1,1][(distRight > distLeft) == (self.actions[0]==Dirs.EAST)]
+                sensorVarY = (0.9-m)*[-1,1][(distRight > distLeft) == (self.actions[0]==Dirs.SOUTH)]
                 
                 self.x += fixX*(sensorVarX - robotVarX)/2
                 self.y += fixY*(sensorVarY - robotVarY)/2

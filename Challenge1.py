@@ -5,7 +5,7 @@ import math
 CELLROWS=7
 CELLCOLS=14
 
-class RMI(SearchDomain):
+class Challenge1(SearchDomain):
 
     def __init__(self, map=None):
         self.map = map

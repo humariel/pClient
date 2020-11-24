@@ -6,3 +6,4 @@ class Dirs(Enum):
     WEST = 2
     NORTH = 3
     STOP = 4
+    FINISH = 5
